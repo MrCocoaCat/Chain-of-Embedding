@@ -23,10 +23,11 @@ from transformers import (
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f'device: {device}')
 
-project_root_path = os.environ["PROJECT_PATH"]
-sys.path.append(project_root_path)
+# project_root_path = os.environ["PROJECT_PATH"]
+# sys.path.append(project_root_path)
 from Data.load_data import DatasetInfo
 from Model.load_model import load_base_model
+#
 from config_pool import MODEL_POOL, DATASET_POOL, LANGUAGE_MAPPING
 from inference import Inference
 
@@ -77,7 +78,7 @@ if __name__ == '__main__':
 
     language_list = LANGUAGE_MAPPING[args.dataset] if args.dataset in LANGUAGE_MAPPING else ["en"]
     for lang in language_list:
-        dataset_info["language"] = lang
+        dataset_info["language"] = lang # 为dataset_info赋值
         Infer = Inference(model_info, dataset_info, verbose)
         Infer.dataset_inference()
     

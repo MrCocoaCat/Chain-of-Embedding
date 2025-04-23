@@ -28,7 +28,8 @@ from transformers import (
     GenerationConfig,
 )
 
-project_root_path = os.environ["PROJECT_PATH"]
+#project_root_path = os.environ["PROJECT_PATH"]
+project_root_path = "C:/Users/liyubo/Documents/GitHub/Chain-of-Embedding/"
 sys.path.append(project_root_path)
 from Data.load_data import DatasetInfo
 from prompt_pool import *
@@ -133,7 +134,7 @@ class Inference:
     def parse_input(self, sample):
         input_data = sample[self.language]
         output_data = sample["answer"]
-
+        # 将数据集替换到提示工程中
         model_input = DATASET_PROMPTS[self.dataset_name].replace("{input_data}", input_data)
         if self.dataset_name == "theoremqa":
             model_input = model_input.replace("{answer_type}", sample["answer_type"])

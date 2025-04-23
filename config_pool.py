@@ -15,5 +15,5 @@ DATASET_POOL = [
 ]
 
 LANGUAGE_MAPPING = {
-    "mgsm": ["en", "bn", "de", "es", "fr", "ja", "ru", "sw", "te", "th", "zh"],
+    #"mgsm": ["en", "bn", "de", "es", "fr", "ja", "ru", "sw", "te", "th", "zh"],
 }

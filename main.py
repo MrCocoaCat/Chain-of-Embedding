@@ -12,7 +12,7 @@ import pickle
 import scipy.spatial
 import torch
 import torch.nn as nn
-
+import torch.nn.functional as F
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -29,14 +29,14 @@ from Data.load_data import DatasetInfo
 from Model.load_model import load_base_model
 #
 from config_pool import MODEL_POOL, DATASET_POOL, LANGUAGE_MAPPING
-from inference import Inference
+from inference import Inference,InferenceFromOutput,InferenceSaveLayer
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="chain-of-embedding")
 
-    parser.add_argument("--model_name", type=str, default="Llama-3-8B-Instruct", choices=MODEL_POOL)
-    parser.add_argument("--dataset", type=str, default="mgsm", choices=DATASET_POOL)
+    parser.add_argument("--model_name", type=str, default="Qwen2.5-7B-Instruct", choices=MODEL_POOL)
+    parser.add_argument("--dataset", type=str, default="commonsenseqa", choices=DATASET_POOL)
     parser.add_argument("--max_output_token", type=int, default=2048)
 
     parser.add_argument("--print_model_parameter", action="store_true")
@@ -79,6 +79,11 @@ if __name__ == '__main__':
     language_list = LANGUAGE_MAPPING[args.dataset] if args.dataset in LANGUAGE_MAPPING else ["en"]
     for lang in language_list:
         dataset_info["language"] = lang # 为dataset_info赋值
-        Infer = Inference(model_info, dataset_info, verbose)
+        # Infer = Inference(model_info, dataset_info, verbose)
+        # Infer.dataset_inference()
+        # Infer = InferenceSaveLayer(model_info, dataset_info, verbose)
+        # Infer.dataset_inference()
+        Infer = InferenceFromOutput(model_info, dataset_info, verbose)
         Infer.dataset_inference()
+
     

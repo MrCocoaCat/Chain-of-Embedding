@@ -7,8 +7,9 @@ import argparse
 from sklearn.metrics import roc_curve, auc, precision_recall_curve
 from scipy import interpolate
 
-project_root_path = os.environ["PROJECT_PATH"]
-sys.path.append(project_root_path)
+#project_root_path = os.environ["PROJECT_PATH"]
+#sys.path.append(project_root_path)
+project_root_path = "C:\\Users\\liyubo\\Documents\\GitHub\\Chain-of-Embedding\\"
 from Data.load_data import DatasetInfo
 from config_pool import MODEL_POOL, DATASET_POOL, LANGUAGE_MAPPING
 from match import AnswerParsing
@@ -25,12 +26,12 @@ class StandardEvaluation:
 
     def std_eval(self, args):
         answerparsing = AnswerParsing(args.dataset)
-        output_dir = os.path.join(project_root_path, f"OutputInfo/{args.language}/Output", args.model_name, args.dataset)
-        coe_dir = os.path.join(project_root_path, f"OutputInfo/{args.language}/CoE", args.model_name, args.dataset)
-        
+        output_dir = os.path.join(project_root_path, "OutputInfo",args.language,"Output", args.model_name, args.dataset)
+        coe_dir = os.path.join(project_root_path, "OutputInfo",args.language,"CoE", args.model_name, args.dataset)
+
         output_list, coe_list, binary_list = [], [], []
         acc = 0
-        for i in range(self.data_size):
+        for i in range(int(self.data_size / 10)):
             sample = self.data_all[i]
             true_output = sample["answer"]
 
@@ -48,7 +49,7 @@ class StandardEvaluation:
             coe_list.append(coe)
             binary_list.append(binary)
 
-        return round(acc / self.data_size, 3), output_list, coe_list, binary_list
+        return round(acc / self.data_size, 3), output_list, coe_list, binary_listcc
 
 
 class SelfEvaluation:

@@ -2,6 +2,7 @@ MODEL_POOL = [
         "Llama-3-8B-Instruct",
         "Llama-3-70B-Instruct",
         "qwen2-7B-Instruct",
+        "Qwen2.5-7B-Instruct",
         "qwen2-72B-Instruct",
         "Mistral-7B-Instruct",
     ]

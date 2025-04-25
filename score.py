@@ -20,30 +20,31 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 class OutputScoreInfo:
     def __init__(self, output_scores):
         self.output_scores = output_scores
-        self.all_token_re = []
-        self.all_token_max_re = []
+        self.all_token_re = [] # 将每个layer转换为以为数组，并进行归一化处理
+        self.all_token_max_re = [] # 存储每一个layer 的最大值
         for token in range(len(self.output_scores)):
             re = self.output_scores[token][0].tolist()
-            re = F.softmax(torch.tensor(re).to(device), 0).cpu().tolist()
+            re = F.softmax(torch.tensor(re).to(device), 0).cpu().tolist() # 归一化处理
             self.all_token_re.append(re)
             self.all_token_max_re.append(max(re))
 
     def compute_maxprob(self):
         seq_prob_list = self.all_token_max_re
-        max_prob = np.mean(seq_prob_list)
+        max_prob = np.mean(seq_prob_list) # 平均值
         return max_prob
 
     def compute_ppl(self):
-        seq_ppl_list = [math.log(max_re) for max_re in self.all_token_max_re]
-        ppl = -np.mean(seq_ppl_list)
+        seq_ppl_list = [math.log(max_re) for max_re in self.all_token_max_re] # 求每个元素的对数
+        ppl = -np.mean(seq_ppl_list) # 再对所有的对数求平均值
         return ppl
 
     def compute_entropy(self):
-        seq_entropy_list = [entropy(re, base=2) for re in self.all_token_re]
-        seq_entropy = np.mean(seq_entropy_list)
+        seq_entropy_list = [entropy(re, base=2) for re in self.all_token_re] # 对self.all_token_re 中的每个元素，以2为底计算熵
+        seq_entropy = np.mean(seq_entropy_list) # 求平均数
         return seq_entropy
 
-
+    def save(self):
+        pass
 
 class CoEScoreInfo:
     def __init__(self, hidden_states):

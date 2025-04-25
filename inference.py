@@ -17,7 +17,7 @@ import matplotlib.font_manager as fm
 from matplotlib.colors import Normalize
 import seaborn as sns
 from collections import Counter
-
+import torch.nn.functional as F
 import numpy as np
 import pickle
 from tqdm import tqdm
@@ -43,7 +43,6 @@ class Inference:
         self.model_info = model_info
         self.dataset_info = dataset_info
         self.verbose = verbose
-
         self.model = self.model_info["model_ckpt"]
         self.model_name = self.model_info["model_name"]
         self.config = self.model_info["model_config"]
@@ -107,12 +106,14 @@ class Inference:
 
 
     def model_inference(self):
+        # 模型进行计算推理额时间
         input_ids = self.sample_info["input"]["model_input_ids"]
         self.model.eval()
         terminators = [self.tokenizer.eos_token_id, self.tokenizer.convert_tokens_to_ids("<|eot_id|>")] \
             if "Llama" in self.model_name else self.tokenizer.eos_token_id
     
         time_start = time.time()
+        # 开始推理
         generation_output = self.model.generate(
             input_ids=input_ids.to(device),
             pad_token_id=self.tokenizer.eos_token_id,
@@ -138,13 +139,12 @@ class Inference:
         model_input = DATASET_PROMPTS[self.dataset_name].replace("{input_data}", input_data)
         if self.dataset_name == "theoremqa":
             model_input = model_input.replace("{answer_type}", sample["answer_type"])
+        # 编码
         input_ids = self.tokenizer.apply_chat_template([{"role": "user", "content": model_input}], 
                             tokenize=True, add_generation_prompt=True, return_tensors="pt")
         input_len = len(input_ids[0])
-
         print(f"********** Input Text (length: {input_len}) **********\n{input_data}\n")
         print(f"********** Input ID **********\n{input_ids}\n")
-        
         return input_data, output_data, model_input, input_ids
 
 
@@ -254,3 +254,131 @@ class Inference:
         if not os.path.exists(filedir):
             os.makedirs(filedir)
         plt.savefig(os.path.join(filedir, self.dataset_name + '_' + str(i) + '.png'), bbox_inches='tight', pad_inches=0)
+
+
+class InferenceFromOutput(Inference):
+    def __init__(self, model_info, dataset_info, verbose):
+        super().__init__(model_info, dataset_info, verbose)
+
+    def greedy_inference(self):
+        for i in tqdm(range(self.data_size)):
+            print("*"*30 + f" index {str(i)} " + "*"*30)
+            sample = self.data_all[i]
+            input_data, output_data, model_input, input_ids = self.parse_input(sample)
+            self.sample_info = {
+                "input": {
+                    "raw_input_data": input_data,
+                    "model_input": model_input,
+                    "model_input_ids": input_ids,
+                },
+                "output": {
+                    "raw_output_data": output_data,
+                }
+            }
+
+            with torch.no_grad():
+                # 将模型保存下来
+                generation_output = self.get_hidden_layer(i)
+                # generation_output = self.model_inference()
+                self.sample_info["output"]["output_scores"] = generation_output.scores
+                self.sample_info["output"]["output_seq"] = generation_output.sequences
+                self.sample_info["output"]["attentions"] = generation_output.attentions
+                self.sample_info["output"]["all_token_hidden_states"] = generation_output.hidden_states # output_len x layer_num x sampling_num x beam_search x hidden_dim
+                self.sample_info["output"]["output_len"] = min(self.max_output_token, len(generation_output.scores))
+
+
+                output_seq, maxprob, ppl, entropy = self.print_output()
+                output = {'id': i,
+                        'answer_type': sample["answer_type"] if self.dataset_name == "theoremqa" else "",
+                        'input_seq': self.sample_info["input"]["model_input"],
+                        'output_seq': output_seq,
+                        'maxprob': maxprob,
+                        'ppl': ppl,
+                        'entropy': entropy}
+                if self.verbose["save_output"]: self.save_output(output, i)
+
+                hidden_states = self.print_hidden_states()
+                if self.verbose["save_hidden_states"]: self.save_hidden_states(hidden_states, i)
+
+                CoE_score = self.print_CoE_score()
+                if self.verbose["save_coe_score"]: self.save_CoE_score(CoE_score, i)
+                if self.verbose["save_coe_figure"]: self.save_CoE_figure(hidden_states, i)
+
+    def get_hidden_layer(self,id):
+        """
+        将模型的layer 保存下来，
+        :return:
+        """
+        filedir = os.path.join(project_root_path, 'OutputInfo',self.language,'HiddenLayer', self.model_name,
+                               self.dataset_name)
+
+        file_path = os.path.join(filedir, self.dataset_name+"_"+str(id)+".pt")
+        #torch.save(output_scores, file_path)
+        print(f"Tensor 已保存到 {file_path}")
+        loaded_tensor = torch.load(file_path)
+        self.sample_info["output"]["output_scores"] = loaded_tensor
+        #print(loaded_tensor)
+
+
+class InferenceSaveLayer(Inference):
+    def __init__(self, model_info, dataset_info, verbose):
+        super().__init__(model_info, dataset_info, verbose)
+
+    def greedy_inference(self):
+        for i in tqdm(range(self.data_size)):
+            print("*"*30 + f" index {str(i)} " + "*"*30)
+            sample = self.data_all[i]
+            input_data, output_data, model_input, input_ids = self.parse_input(sample)
+            self.sample_info = {
+                "input": {
+                    "raw_input_data": input_data,
+                    "model_input": model_input,
+                    "model_input_ids": input_ids,
+                },
+                "output": {
+                    "raw_output_data": output_data,
+                }
+            }
+
+            with torch.no_grad():
+                generation_output = self.model_inference()
+                self.sample_info["output"]["output_scores"] = generation_output.scores
+                self.sample_info["output"]["output_seq"] = generation_output.sequences
+                self.sample_info["output"]["attentions"] = generation_output.attentions
+                self.sample_info["output"]["all_token_hidden_states"] = generation_output.hidden_states # output_len x layer_num x sampling_num x beam_search x hidden_dim
+                self.sample_info["output"]["output_len"] = min(self.max_output_token, len(generation_output.scores))
+                # 将模型保存下来
+                self.save_hidden_layer(i)
+
+                output_seq, maxprob, ppl, entropy = self.print_output()
+                output = {'id': i,
+                        'answer_type': sample["answer_type"] if self.dataset_name == "theoremqa" else "",
+                        'input_seq': self.sample_info["input"]["model_input"],
+                        'output_seq': output_seq,
+                        'maxprob': maxprob,
+                        'ppl': ppl,
+                        'entropy': entropy}
+                if self.verbose["save_output"]: self.save_output(output, i)
+
+                hidden_states = self.print_hidden_states()
+                if self.verbose["save_hidden_states"]: self.save_hidden_states(hidden_states, i)
+
+                CoE_score = self.print_CoE_score()
+                if self.verbose["save_coe_score"]: self.save_CoE_score(CoE_score, i)
+                if self.verbose["save_coe_figure"]: self.save_CoE_figure(hidden_states, i)
+
+    def save_hidden_layer(self,id):
+        """
+        将模型的layer 保存下来，
+        :return:
+        """
+        filedir = os.path.join(project_root_path, 'OutputInfo',self.language,'HiddenLayer', self.model_name,
+                               self.dataset_name)
+        if not os.path.exists(filedir):
+            os.makedirs(filedir)
+        output_scores = self.sample_info["output"]["output_scores"]
+        file_path = os.path.join(filedir, self.dataset_name+"_"+str(id)+".pt")
+        torch.save(output_scores, file_path)
+        print(f"Tensor 已保存到 {file_path}")
+        # loaded_tensor = torch.load(file_path)
+        # print(loaded_tensor)

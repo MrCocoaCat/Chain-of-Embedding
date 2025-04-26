@@ -105,6 +105,7 @@ class Inference:
                 if self.verbose["save_coe_figure"]: self.save_CoE_figure(hidden_states, i)
 
 
+
     def model_inference(self):
         # 模型进行计算推理额时间
         input_ids = self.sample_info["input"]["model_input_ids"]
@@ -260,33 +261,27 @@ class InferenceFromOutput(Inference):
     def __init__(self, model_info, dataset_info, verbose):
         super().__init__(model_info, dataset_info, verbose)
 
+    def get_output(self, i):
+        filedir = os.path.join(project_root_path, f'OutputInfo/{self.language}/Output', self.model_name,
+                               self.dataset_name)
+        # if not os.path.exists(filedir):
+        #     os.makedirs(filedir)
+        with open(os.path.join(filedir, self.dataset_name + '_' + str(i) + '.pkl'), 'rb') as file:
+            #pickle.dump(output, file)
+            loaded_data = pickle.load(file)
+        return  loaded_data
+
     def greedy_inference(self):
         for i in tqdm(range(self.data_size)):
             print("*"*30 + f" index {str(i)} " + "*"*30)
             sample = self.data_all[i]
             input_data, output_data, model_input, input_ids = self.parse_input(sample)
-            self.sample_info = {
-                "input": {
-                    "raw_input_data": input_data,
-                    "model_input": model_input,
-                    "model_input_ids": input_ids,
-                },
-                "output": {
-                    "raw_output_data": output_data,
-                }
-            }
-
+            self.sample_info = self.get_sample_info(i)
             with torch.no_grad():
                 # 将模型保存下来
-                generation_output = self.get_hidden_layer(i)
+                self.get_hidden_layer(i)
                 # generation_output = self.model_inference()
-                self.sample_info["output"]["output_scores"] = generation_output.scores
-                self.sample_info["output"]["output_seq"] = generation_output.sequences
-                self.sample_info["output"]["attentions"] = generation_output.attentions
-                self.sample_info["output"]["all_token_hidden_states"] = generation_output.hidden_states # output_len x layer_num x sampling_num x beam_search x hidden_dim
-                self.sample_info["output"]["output_len"] = min(self.max_output_token, len(generation_output.scores))
-
-
+                # 读取output
                 output_seq, maxprob, ppl, entropy = self.print_output()
                 output = {'id': i,
                         'answer_type': sample["answer_type"] if self.dataset_name == "theoremqa" else "",
@@ -299,7 +294,6 @@ class InferenceFromOutput(Inference):
 
                 hidden_states = self.print_hidden_states()
                 if self.verbose["save_hidden_states"]: self.save_hidden_states(hidden_states, i)
-
                 CoE_score = self.print_CoE_score()
                 if self.verbose["save_coe_score"]: self.save_CoE_score(CoE_score, i)
                 if self.verbose["save_coe_figure"]: self.save_CoE_figure(hidden_states, i)
@@ -314,18 +308,33 @@ class InferenceFromOutput(Inference):
 
         file_path = os.path.join(filedir, self.dataset_name+"_"+str(id)+".pt")
         #torch.save(output_scores, file_path)
-        print(f"Tensor 已保存到 {file_path}")
+        print(f" 读取 {file_path} Tensor")
         loaded_tensor = torch.load(file_path)
         self.sample_info["output"]["output_scores"] = loaded_tensor
         #print(loaded_tensor)
 
+
+
+    def get_sample_info(self,id):
+        """
+        保存sample_info
+        :return:
+        """
+        filedir = os.path.join(project_root_path, f'OutputInfo/{self.language}/Sample_info', self.model_name, self.dataset_name)
+        if not os.path.exists(filedir):
+            os.makedirs(filedir)
+        with open(os.path.join(filedir, self.dataset_name + '_' + str(id) + '.pkl'), 'rb') as file:
+            sample_info = pickle.load(file)
+        return  sample_info
 
 class InferenceSaveLayer(Inference):
     def __init__(self, model_info, dataset_info, verbose):
         super().__init__(model_info, dataset_info, verbose)
 
     def greedy_inference(self):
-        for i in tqdm(range(self.data_size)):
+        r = range(self.data_size)
+        r = range(100)
+        for i in tqdm(r):
             print("*"*30 + f" index {str(i)} " + "*"*30)
             sample = self.data_all[i]
             input_data, output_data, model_input, input_ids = self.parse_input(sample)
@@ -358,7 +367,11 @@ class InferenceSaveLayer(Inference):
                         'maxprob': maxprob,
                         'ppl': ppl,
                         'entropy': entropy}
-                if self.verbose["save_output"]: self.save_output(output, i)
+                if self.verbose["save_output"]:
+                    self.save_output(output, i)
+                # 将sample_info 保存
+
+                self.save_sample_info(self.sample_info,i)
 
                 hidden_states = self.print_hidden_states()
                 if self.verbose["save_hidden_states"]: self.save_hidden_states(hidden_states, i)
@@ -380,5 +393,14 @@ class InferenceSaveLayer(Inference):
         file_path = os.path.join(filedir, self.dataset_name+"_"+str(id)+".pt")
         torch.save(output_scores, file_path)
         print(f"Tensor 已保存到 {file_path}")
-        # loaded_tensor = torch.load(file_path)
-        # print(loaded_tensor)
+
+    def save_sample_info(self,sample_info,id):
+        """
+        保存sample_info
+        :return:
+        """
+        filedir = os.path.join(project_root_path, f'OutputInfo/{self.language}/Sample_info', self.model_name, self.dataset_name)
+        if not os.path.exists(filedir):
+            os.makedirs(filedir)
+        with open(os.path.join(filedir, self.dataset_name + '_' + str(id) + '.pkl'), 'wb') as file:
+            pickle.dump(sample_info, file)

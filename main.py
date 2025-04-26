@@ -81,9 +81,9 @@ if __name__ == '__main__':
         dataset_info["language"] = lang # 为dataset_info赋值
         # Infer = Inference(model_info, dataset_info, verbose)
         # Infer.dataset_inference()
-        # Infer = InferenceSaveLayer(model_info, dataset_info, verbose)
-        # Infer.dataset_inference()
-        Infer = InferenceFromOutput(model_info, dataset_info, verbose)
+        Infer = InferenceSaveLayer(model_info, dataset_info, verbose)
         Infer.dataset_inference()
+        # Infer = InferenceFromOutput(model_info, dataset_info, verbose)
+        # Infer.dataset_inference()
 
     

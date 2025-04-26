@@ -43,8 +43,6 @@ class OutputScoreInfo:
         seq_entropy = np.mean(seq_entropy_list) # 求平均数
         return seq_entropy
 
-    def save(self):
-        pass
 
 class CoEScoreInfo:
     def __init__(self, hidden_states):

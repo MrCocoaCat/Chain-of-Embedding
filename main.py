@@ -83,7 +83,7 @@ if __name__ == '__main__':
         # Infer.dataset_inference()
         Infer = InferenceSaveLayer(model_info, dataset_info, verbose)
         Infer.dataset_inference()
-        # Infer = InferenceFromOutput(model_info, dataset_info, verbose)
-        # Infer.dataset_inference()
+        Infer = InferenceFromOutput(model_info, dataset_info, verbose)
+        Infer.dataset_inference()
 
     

@@ -116,15 +116,25 @@ class Inference:
         time_start = time.time()
         # 开始推理
         generation_output = self.model.generate(
+            # 将输入的ID张量移动到指定的设备（如GPU）上
             input_ids=input_ids.to(device),
+            # 设置填充标记的ID为分词器的结束标记ID
             pad_token_id=self.tokenizer.eos_token_id,
+            # 设置结束标记的ID为 terminators 变量所指定的值
             eos_token_id=terminators,
+            # 使用预定义的生成配置
             generation_config=self.generation_config,
+            # 让生成方法返回一个字典，包含生成的结果和其他信息
             return_dict_in_generate=True,
+            # 设置最大的新生成标记数量
             max_new_tokens=self.max_output_token,
+            # 要求生成过程中输出注意力权重
             output_attentions=True,
+            # 要求生成过程中输出隐藏层状态
             output_hidden_states=True,
+            # 要求生成过程中输出每个时间步的分数
             output_scores=True,
+            # 不使用采样策略，而是使用贪心搜索进行生成
             do_sample=False,
         )
         time_end = time.time()
@@ -177,13 +187,13 @@ class Inference:
     
 
     def print_hidden_states(self):
-        hidden_states = self.sample_info["output"]["all_token_hidden_states"]
+        hidden_states = self.sample_info["output"]["all_token_hidden_states"]  #所有的hidden层的tensor
         output_len = self.sample_info["output"]["output_len"]
 
         layer_num = len(hidden_states[1])
         hs_all_layer = []
         for j in range(layer_num):
-            all_pos_hs = np.array([np.array(hidden_states[pos][j][0][0].cpu()) for pos in range(0, output_len)])
+            all_pos_hs = np.array([np.array(hidden_states[pos][j][0][0].cpu()) for pos in range(0, output_len)]) #
             hs_all_layer.append(np.mean(all_pos_hs, axis=0))
         hidden_states = hs_all_layer
         print(f"********** Hidden State Size: **********\n{np.array(hidden_states).shape}\n")
@@ -275,7 +285,6 @@ class InferenceFromOutput(Inference):
         for i in tqdm(range(self.data_size)):
             print("*"*30 + f" index {str(i)} " + "*"*30)
             sample = self.data_all[i]
-            input_data, output_data, model_input, input_ids = self.parse_input(sample)
             self.sample_info = self.get_sample_info(i)
             with torch.no_grad():
                 # 将模型保存下来
@@ -372,7 +381,6 @@ class InferenceSaveLayer(Inference):
                 # 将sample_info 保存
 
                 self.save_sample_info(self.sample_info,i)
-
                 hidden_states = self.print_hidden_states()
                 if self.verbose["save_hidden_states"]: self.save_hidden_states(hidden_states, i)
 

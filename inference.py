@@ -2,7 +2,8 @@ import os
 import sys
 import time
 import random
-
+from PIL import Image
+import numpy as np
 import pickle
 import argparse
 import scipy.spatial
@@ -29,7 +30,7 @@ from transformers import (
 )
 
 #project_root_path = os.environ["PROJECT_PATH"]
-project_root_path = "C:/Users/liyubo/Documents/GitHub/Chain-of-Embedding/"
+project_root_path = "E:/GitHub/Chain-of-Embedding/"
 sys.path.append(project_root_path)
 from Data.load_data import DatasetInfo
 from prompt_pool import *
@@ -189,7 +190,6 @@ class Inference:
     def print_hidden_states(self):
         hidden_states = self.sample_info["output"]["all_token_hidden_states"]  #所有的hidden层的tensor
         output_len = self.sample_info["output"]["output_len"]
-
         layer_num = len(hidden_states[1])
         hs_all_layer = []
         for j in range(layer_num):
@@ -281,15 +281,14 @@ class InferenceFromOutput(Inference):
             loaded_data = pickle.load(file)
         return  loaded_data
 
-    def greedy_inference(self):
-        for i in tqdm(range(self.data_size)):
+    def greedy_inference(self,range_start, range_end):
+        for i in tqdm(range(range_start,range_end)):
             print("*"*30 + f" index {str(i)} " + "*"*30)
             sample = self.data_all[i]
             self.sample_info = self.get_sample_info(i)
             with torch.no_grad():
-                # 将模型保存下来
+                # 获取模型
                 self.get_hidden_layer(i)
-                # generation_output = self.model_inference()
                 # 读取output
                 output_seq, maxprob, ppl, entropy = self.print_output()
                 output = {'id': i,
@@ -300,9 +299,9 @@ class InferenceFromOutput(Inference):
                         'ppl': ppl,
                         'entropy': entropy}
                 if self.verbose["save_output"]: self.save_output(output, i)
-
                 hidden_states = self.print_hidden_states()
-                if self.verbose["save_hidden_states"]: self.save_hidden_states(hidden_states, i)
+                if self.verbose["save_hidden_states"]:
+                    self.save_hidden_states(hidden_states, i)
                 CoE_score = self.print_CoE_score()
                 if self.verbose["save_coe_score"]: self.save_CoE_score(CoE_score, i)
                 if self.verbose["save_coe_figure"]: self.save_CoE_figure(hidden_states, i)
@@ -323,7 +322,6 @@ class InferenceFromOutput(Inference):
         #print(loaded_tensor)
 
 
-
     def get_sample_info(self,id):
         """
         保存sample_info
@@ -337,13 +335,17 @@ class InferenceFromOutput(Inference):
         return  sample_info
 
 class InferenceSaveLayer(Inference):
-    def __init__(self, model_info, dataset_info, verbose):
+    def __init__(self, model_info, dataset_info, verbose,range_start=None,range_end=None):
         super().__init__(model_info, dataset_info, verbose)
+        self.range_start = range_start
+        self.range_end = range_end
 
     def greedy_inference(self):
-        r = range(self.data_size)
-        r = range(100)
-        for i in tqdm(r):
+        if self.range_end is None:
+            self.range_end = self.data_size
+        if self.range_start is None:
+            self.range_start = 0
+        for i in tqdm(range( self.range_start,self.range_end)):
             print("*"*30 + f" index {str(i)} " + "*"*30)
             sample = self.data_all[i]
             input_data, output_data, model_input, input_ids = self.parse_input(sample)

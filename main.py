@@ -1,42 +1,44 @@
-import os
-import sys
-import time
-import math
-import json
-import random
-import argparse
-from tqdm import tqdm
-
-import numpy as np
-import pickle
-import scipy.spatial
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+# import os
+# import sys
+# import time
+# import math
+# import json
+# import random
+#
+# from tqdm import tqdm
+#
+# import numpy as np
+# import pickle
+# import scipy.spatial
+# import torch.nn as nn
+# import torch.nn.functional as F
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
     AutoConfig,
     GenerationConfig,
 )
+import argparse
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f'device: {device}')
 
 # project_root_path = os.environ["PROJECT_PATH"]
 # sys.path.append(project_root_path)
+import torch
 from Data.load_data import DatasetInfo
 from Model.load_model import load_base_model
-#
 from config_pool import MODEL_POOL, DATASET_POOL, LANGUAGE_MAPPING
 from inference import Inference,InferenceFromOutput,InferenceSaveLayer
 
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+print(f'device: {device}')
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="chain-of-embedding")
 
-    parser.add_argument("--model_name", type=str, default="Qwen2.5-7B-Instruct", choices=MODEL_POOL)
-    parser.add_argument("--dataset", type=str, default="mgsm", choices=DATASET_POOL)
+    parser.add_argument("--model_name", type=str, default="Llama-3-8B-Instruct", choices=MODEL_POOL)
+    parser.add_argument("--dataset", type=str, default="belebele", choices=DATASET_POOL)
     parser.add_argument("--max_output_token", type=int, default=2048)
 
     parser.add_argument("--print_model_parameter", action="store_true")
@@ -81,7 +83,7 @@ if __name__ == '__main__':
         dataset_info["language"] = lang # 为dataset_info赋值
         # Infer = Inference(model_info, dataset_info, verbose)
         # Infer.dataset_inference()
-        Infer = InferenceSaveLayer(model_info, dataset_info, verbose,range_start=199,range_end=1000)
+        Infer = InferenceSaveLayer(model_info, dataset_info, verbose,range_start=560)
         Infer.dataset_inference()
         #Infer = InferenceFromOutput(model_info, dataset_info, verbose)
         #Infer.dataset_inference()

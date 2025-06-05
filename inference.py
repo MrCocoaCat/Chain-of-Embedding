@@ -30,7 +30,7 @@ from transformers import (
 )
 
 #project_root_path = os.environ["PROJECT_PATH"]
-project_root_path = "E:/GitHub/Chain-of-Embedding/"
+project_root_path = "D:/GitHub/Chain-of-Embedding/"
 sys.path.append(project_root_path)
 from Data.load_data import DatasetInfo
 from prompt_pool import *
@@ -85,7 +85,7 @@ class Inference:
                 self.sample_info["output"]["output_scores"] = generation_output.scores
                 self.sample_info["output"]["output_seq"] = generation_output.sequences
                 self.sample_info["output"]["attentions"] = generation_output.attentions
-                self.sample_info["output"]["all_token_hidden_states"] = generation_output.hidden_states # output_len x layer_num x sampling_num x beam_search x hidden_dim
+                self.sample_info["output"]["all_token_hidden_states"] = generation_output.hidden_states   # output_len x layer_num x sampling_num x beam_search x hidden_dim
                 self.sample_info["output"]["output_len"] = min(self.max_output_token, len(generation_output.scores))
 
                 output_seq, maxprob, ppl, entropy = self.print_output()
@@ -97,10 +97,8 @@ class Inference:
                         'ppl': ppl,
                         'entropy': entropy}
                 if self.verbose["save_output"]: self.save_output(output, i)
-
                 hidden_states = self.print_hidden_states()
                 if self.verbose["save_hidden_states"]: self.save_hidden_states(hidden_states, i)
-
                 CoE_score = self.print_CoE_score()
                 if self.verbose["save_coe_score"]: self.save_CoE_score(CoE_score, i) 
                 if self.verbose["save_coe_figure"]: self.save_CoE_figure(hidden_states, i)
@@ -194,6 +192,7 @@ class Inference:
         hs_all_layer = []
         for j in range(layer_num):
             all_pos_hs = np.array([np.array(hidden_states[pos][j][0][0].cpu()) for pos in range(0, output_len)]) #
+            #all_pos_hs = np.array([np.array(hidden_states[pos][j][0][0]) for pos in range(0, output_len)])  #
             hs_all_layer.append(np.mean(all_pos_hs, axis=0))
         hidden_states = hs_all_layer
         print(f"********** Hidden State Size: **********\n{np.array(hidden_states).shape}\n")
@@ -218,6 +217,7 @@ class Inference:
         hs_all_layer = []
         for j in range(layer_num):
             all_pos_hs = np.array([np.array(hidden_states[pos][j][0][0].cpu()) for pos in range(0, output_len)])
+            #all_pos_hs = np.array([np.array(hidden_states[pos][j][0][0]) for pos in range(0, output_len)])
             hs_all_layer.append(np.mean(all_pos_hs, axis=0))
 
         coescoreinfo = CoEScoreInfo(hs_all_layer)

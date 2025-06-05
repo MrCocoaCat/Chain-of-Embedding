@@ -1,7 +1,7 @@
 import os
 import jsonlines
 
-dataset_path = "C:/Users/liyubo/Documents/GitHub/Chain-of-Embedding/Data/"
+dataset_path = "D:/GitHub/Chain-of-Embedding/Data/"
 
 class DatasetInfo:
     """

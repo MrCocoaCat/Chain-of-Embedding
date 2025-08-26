@@ -2,25 +2,46 @@ import pickle
 import time
 import torch
 import numpy as np
+from numpy.lib.scimath import arccos
 from tqdm import tqdm
+import random
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-project_root_path = "E:/GitHub/Chain-of-Embedding/"
-ImportantFilePath = "D:\\GitHub\\Chain-of-Embedding\\important_layer.txt"
+# project_root_path = "E:/GitHub/Chain-of-Embedding/"
+model_name = "Qwen2.5-7B-Instruct"
+# model_name = "Qwen2.5-7B-Instruct"
 
 
-
+# def generate_unique_index(start, end, length):
+#     return torch.randperm(end - start)[:length].tolist()
 
 def generate_unique_index(start, end, length):
-    return torch.randperm(end - start)[:length].tolist()
+    """
+    生成指定范围内的唯一随机整数列表（纯Python实现）
 
-def get_sample_info(id):
+    参数:
+        start (int): 起始值（包含）
+        end (int): 结束值（不包含）
+        length (int): 需要生成的索引数量
+
+    返回:
+        list: 包含唯一随机整数的列表，范围为 [start, end)
+
+    异常:
+        ValueError: 当 length 大于可选择的范围时
+    """
+    if length > end - start:
+        raise ValueError(f"无法生成 {length} 个唯一索引，范围 [{start}, {end}) 只有 {end - start} 个元素")
+    return random.sample(range(start, end), length)
+
+def get_sample_info(id,dateset_name,):
     """
     保存sample_info
     :return:
     """
-    file_path = f"D:\\GitHub\\Chain-of-Embedding\\OutputInfo\\en\\Sample_info\\Qwen2.5-7B-Instruct\\commonsenseqa\\commonsenseqa_{id}.pkl"
+    file_path = f"E:\\GitHub\\Chain-of-Embedding\\OutputInfo\\en\\Sample_info\\{model_name}\\{dateset_name}\\{dateset_name}_{id}.pkl"
+    print(file_path)
     with open(file_path, 'rb') as file:
         sample_info = pickle.load(file)
     return  sample_info
@@ -53,7 +74,9 @@ def get_cos_similar_matrix(v1, v2, device):
     res[torch.isinf(res)] = 0
     # 将余弦相似度从[-1,1]范围归一化到[0,1]范围
     # 公式：normalized = (original + 1) / 2 = 0.5 + 0.5 * original
-    res = 0.5 + 0.5 * res
+    # 原始版本
+    # res = 0.5 + 0.5 * res
+    res = torch.arccos(res)
     # 将结果移回CPU以释放GPU内存
     res = res.cpu()
     # 删除中间变量以释放GPU内存
@@ -86,30 +109,29 @@ def conunt_attention(id):
 def average_similarity(layer_cosine_similarity):
     return torch.tensor(layer_cosine_similarity).mean().item()
 
-def get_cosine_similarity(device, layer_intervals, num_layer):
+def get_cosine_similarity(device, layer_intervals,dateset_name):
     # assert len(dataset) > num_data
     # model = model.to(device)
     hidden_states_list = []
-    data_index = generate_unique_index(0, 800, 20)
+    data_index = generate_unique_index(1, 100, 5)
    # data_index = [1, 15, 17, 19, 20,30,40,50,60,70,80,90]
+    num_layer = 0
     for i in tqdm(data_index, desc="Collecting hidden states"):
         #input_ids = torch.tensor(dataset[i]['input_ids'])
         print(f"radom id is {i}")
         #if len(input_ids.shape) != 2:
         #    input_ids = input_ids.reshape(1, -1)
         #input_ids = input_ids.to(device)
-        sample_info = get_sample_info(i)
+        sample_info = get_sample_info(i,dateset_name)
         #cos_list = []
         hidden_states = sample_info["output"]["all_token_hidden_states"][0]
         num_layer = len(sample_info["output"]["all_token_hidden_states"][1])
         # print("num_layer", num_layer)
-        #hidden_states = model(input_ids, output_hidden_states=True).hidden_states
+        # hidden_states = model(input_ids, output_hidden_states=True).hidden_states
         hidden_states = [h.cpu() for h in hidden_states]
         hidden_states_list.append(hidden_states)
-
         #del input_ids
-
-    cosine_similarity = [[] for _ in range(num_layer - layer_intervals + 1)]
+     # cosine_similarity = [[] for _ in range(num_layer - layer_intervals + 1)]
     cosine_similarity = [[] for _ in range(num_layer - layer_intervals )]
     for i in range(len(hidden_states_list)):
         #for j in range(num_layer - layer_intervals + 1):
@@ -154,12 +176,25 @@ def read_list_from_txt(file_path):
 
 
 if __name__ == '__main__':
-    start_time = time.time() 
-    task_list = list(range(3))
-    layer_intervals = 1
-    num_layer = 29
-    similarities = get_cosine_similarity(device, layer_intervals, num_layer)
-    print(similarities)
-    save_list_to_txt(similarities,ImportantFilePath)
+
+    dateset_names = ["mgsm","commonsenseqa","belebele"]
+    con_dict = {}
+    # if model_name ==  "Llama-3-8B-Instruct":
+    #     num_layer = 33
+    # elif model_name == "Qwen2.5-7B-Instruct":
+    #     num_layer = 29
+    for dateset_name in dateset_names:
+        start_time = time.time()
+        #task_list = list(range(3))
+        layer_intervals = 1
+        similarities = get_cosine_similarity(device, layer_intervals, dateset_name)
+        con_dict[dateset_name] = similarities
+        print(similarities)
+        ImportantFilePath = f"D:\\GitHub\\Chain-of-Embedding\\{model_name}_{dateset_name}_important_layer.txt"
+        save_list_to_txt(similarities,ImportantFilePath)
+    for k,item in con_dict.items():
+        print( k,item)
+
+
 
 

@@ -31,6 +31,7 @@ from transformers import (
 
 #project_root_path = os.environ["PROJECT_PATH"]
 project_root_path = "D:/GitHub/Chain-of-Embedding/"
+Read_project_root_path = "F:/GitHub/Chain-of-Embedding/"
 sys.path.append(project_root_path)
 from Data.load_data import DatasetInfo
 from prompt_pool import *
@@ -225,7 +226,6 @@ class Inference:
         _, coe_ang, _ = coescoreinfo.compute_CoE_Ang()
         coe_r = coescoreinfo.compute_CoE_R()
         coe_c = coescoreinfo.compute_CoE_C()
-
         print(f"********** CoE Score Info: **********\nMag {coe_mag}; Ang {coe_ang}; R {coe_r}; C {coe_c}\n")
         return {
             "Mag": coe_mag,
@@ -233,8 +233,6 @@ class Inference:
             "R": coe_r,
             "C": coe_c
         }
-
-
     def save_CoE_score(self, CoE_score, i):
         filedir = os.path.join(project_root_path, f'OutputInfo/{self.language}/CoE', self.model_name, self.dataset_name)
         if not os.path.exists(filedir):
@@ -268,8 +266,10 @@ class Inference:
 
 
 class InferenceFromOutput(Inference):
-    def __init__(self, model_info, dataset_info, verbose):
+    def __init__(self, model_info, dataset_info, verbose,range_start=None,range_end = None):
         super().__init__(model_info, dataset_info, verbose)
+        self.range_start = range_start
+        self.range_end = range_end
 
     def get_output(self, i):
         filedir = os.path.join(project_root_path, f'OutputInfo/{self.language}/Output', self.model_name,
@@ -281,8 +281,12 @@ class InferenceFromOutput(Inference):
             loaded_data = pickle.load(file)
         return  loaded_data
 
-    def greedy_inference(self,range_start, range_end):
-        for i in tqdm(range(range_start,range_end)):
+    def greedy_inference(self):
+        if self.range_end is None:
+            self.range_end = self.data_size
+        if self.range_start is None:
+            self.range_start = 0
+        for i in tqdm(range(self.range_start,self.range_end)):
             print("*"*30 + f" index {str(i)} " + "*"*30)
             sample = self.data_all[i]
             self.sample_info = self.get_sample_info(i)
@@ -311,7 +315,7 @@ class InferenceFromOutput(Inference):
         将模型的layer 保存下来，
         :return:
         """
-        filedir = os.path.join(project_root_path, 'OutputInfo',self.language,'HiddenLayer', self.model_name,
+        filedir = os.path.join(Read_project_root_path, 'OutputInfo',self.language,'HiddenLayer', self.model_name,
                                self.dataset_name)
 
         file_path = os.path.join(filedir, self.dataset_name+"_"+str(id)+".pt")
@@ -327,7 +331,8 @@ class InferenceFromOutput(Inference):
         保存sample_info
         :return:
         """
-        filedir = os.path.join(project_root_path, f'OutputInfo/{self.language}/Sample_info', self.model_name, self.dataset_name)
+        #Read_project_root_path = "F:/GitHub/Chain-of-Embedding/"
+        filedir = os.path.join(Read_project_root_path, f'OutputInfo/{self.language}/Sample_info', self.model_name, self.dataset_name)
         if not os.path.exists(filedir):
             os.makedirs(filedir)
         with open(os.path.join(filedir, self.dataset_name + '_' + str(id) + '.pkl'), 'rb') as file:
@@ -395,7 +400,8 @@ class InferenceSaveLayer(Inference):
         将模型的layer 保存下来，
         :return:
         """
-        filedir = os.path.join(project_root_path, 'OutputInfo',self.language,'HiddenLayer', self.model_name,
+        save_project_root_path =  "E:/GitHub/Chain-of-Embedding/"
+        filedir = os.path.join(save_project_root_path, 'OutputInfo',self.language,'HiddenLayer', self.model_name,
                                self.dataset_name)
         if not os.path.exists(filedir):
             os.makedirs(filedir)

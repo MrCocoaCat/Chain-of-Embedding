@@ -1,17 +1,4 @@
-# import os
-# import sys
-# import time
-# import math
-# import json
-# import random
-#
-# from tqdm import tqdm
-#
-# import numpy as np
-# import pickle
-# import scipy.spatial
-# import torch.nn as nn
-# import torch.nn.functional as F
+from sympy import false
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -38,7 +25,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="chain-of-embedding")
 
     parser.add_argument("--model_name", type=str, default="Llama-3-8B-Instruct", choices=MODEL_POOL)
-    parser.add_argument("--dataset", type=str, default="belebele", choices=DATASET_POOL)
+    parser.add_argument("--dataset", type=str, default="commonsenseqa", choices=DATASET_POOL)
     parser.add_argument("--max_output_token", type=int, default=2048)
 
     parser.add_argument("--print_model_parameter", action="store_true")
@@ -70,8 +57,8 @@ if __name__ == '__main__':
     verbose = {
         "save_output": args.save_output,
         "save_hidden_states": args.save_hidden_states,
-        "save_coe_score": args.save_coe_score,
-        "save_coe_figure": args.save_coe_figure
+        "save_coe_score": "true",
+        "save_coe_figure": "false"
     }
 
     print(f"***** Model Name: *****\n{args.model_name}")
@@ -83,9 +70,7 @@ if __name__ == '__main__':
         dataset_info["language"] = lang # 为dataset_info赋值
         # Infer = Inference(model_info, dataset_info, verbose)
         # Infer.dataset_inference()
-        Infer = InferenceSaveLayer(model_info, dataset_info, verbose,range_start=560)
+        Infer = InferenceSaveLayer(model_info, dataset_info, verbose,range_start=600)
         Infer.dataset_inference()
         #Infer = InferenceFromOutput(model_info, dataset_info, verbose)
         #Infer.dataset_inference()
-
-    

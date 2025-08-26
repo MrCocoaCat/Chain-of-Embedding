@@ -11,7 +11,7 @@ from scipy import interpolate
 
 #project_root_path = os.environ["PROJECT_PATH"]
 #sys.path.append(project_root_path)
-project_root_path = "E:\\GitHub\\Chain-of-Embedding\\"
+project_root_path = "F:\\GitHub\\Chain-of-Embedding\\"
 from Data.load_data import DatasetInfo
 from config_pool import MODEL_POOL, DATASET_POOL, LANGUAGE_MAPPING
 from match import AnswerParsing
@@ -54,7 +54,7 @@ class StandardEvaluation:
             binary_list.append(binary)
         return round(acc / int(self.data_size), 3), output_list, coe_list, binary_list
 
-    def std_eval(self, args, range_start=0,range_end=None):
+    def std_eval(self, args, range_start=0, range_end=None):
         answerparsing = AnswerParsing(args.dataset)
         output_dir = os.path.join(project_root_path, "OutputInfo", args.language, "Output", args.model_name,
                                   args.dataset)
@@ -103,7 +103,8 @@ class SelfEvaluation:
         return round(auroc * 100, 2), round(fpr95 * 100, 2), round(aupr * 100, 2), fpr, tpr, thresholds
 
 
-
+# Directional Alignment via Cosine Similarity  (ANG)
+# Spatial Displacement via Euclidean distance. (MAG)
 def svm_train(source_list,lable):
 
     # 示例数据
@@ -134,6 +135,8 @@ def LR(X_train,y_train):
 
 
 if __name__ == '__main__':
+    modl = ["Qwen2.5-7B-Instruct","Llama-3-8B-Instruct"]
+    data = ["mgsm","commonsenseqa"]
     parser = argparse.ArgumentParser(description="eval")
     parser.add_argument("--model_name", type=str, default="Qwen2.5-7B-Instruct", choices=MODEL_POOL)
     parser.add_argument("--dataset", type=str, default="commonsenseqa", choices=DATASET_POOL)
@@ -141,8 +144,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
     stdeval = StandardEvaluation([args.dataset])
 
+
     range_start = 0
-    range_end = 100
+    range_end = stdeval.data_size - 1
+    range_end = 200
+
+    print(f"model_name: {args.model_name}, dataset: {args.dataset}, language: {args.language},range_start: {range_start},range_end: {range_end}")
     acc, output_list, coe_list, binary_list = stdeval.std_eval(args,range_start=range_start,range_end=range_end)
     print(f"# LLM Answer Accuracy: {acc}")
     input_list = [output_list[i]["input_seq"] for i in range(len(output_list))]
@@ -174,120 +181,201 @@ if __name__ == '__main__':
     print(
         f"{'coec_auroc'.rjust(30)}: {coec_auroc:.2f}{'coec_fpr95'.rjust(30)}: {coec_fpr95:.2f}{'coec_aupr'.rjust(30)}: {coec_aupr:.2f}")
 
-
-
-
-    file_path = 'E:\\GitHub\\Chain-of-Embedding\\LayerState\\Qwen2.5-7B-Instruct\\commonsenseqa\\base_list.pickle'
+    project_root_path = "F:\\GitHub\\Chain-of-Embedding\\"
+    file_path = f'D:\\GitHub\\Chain-of-Embedding\\LayerState\\{args.model_name}\\{args.dataset}\\base_list.pickle'
     # 以二进制写入模式打开文件
     with open(file_path, 'rb') as file:
         # 使用 pickle.load 方法从文件中读取对象
         bash_list = pickle.load(file)
-
     bash_list = bash_list['base_list']
-    entropy_list = [1 / bash_list[i]["entropy"] for i in range(range_start,range_end)]
-   # R = [bash_list[i]["R"] for i in range(range_start, range_end)]
+   # entropy_list = [1 / bash_list[i]["entropy"] for i in range(range_start,range_end)]
+
+    entropy_list = []  # 初始化空列表用于存储结果
+
+    # 遍历指定范围的索引
+    for i in range(range_start, range_end):
+        # 从bash_list中获取第i个字典
+        item = bash_list[i]
+        # 提取字典中的"entropy"值
+        #print(i)
+        if item is None:
+            print(i)
+            continue
+        else:
+            entropy_value = item["entropy"]
+            # 计算1除以entropy值
+            reciprocal_entropy = 1 / entropy_value
+            # 将结果添加到entropy_list
+            entropy_list.append(reciprocal_entropy)
+       # R = [bash_list[i]["R"] for i in range(range_start, range_end)]
     binary_list = binary_list[range_start:range_end]
     selfeval = SelfEvaluation([args.dataset])
 
-
     # auroc fpr95 aupr 是三个核心的评价指标
 
-    print("****************************************************************   base   ****************************************************************")
-
-
-
+    print("****************************************************************   base  eee   ****************************************************************")
 
     maxprob_list = [bash_list[i]["maxprob"] for i in range(range_start, range_end)]
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(maxprob_list, binary_list)
-    print(f"maxprob:  {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"maxprob:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}  {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
 
     entropy_list = [1 / bash_list[i]["entropy"] for i in range(range_start, range_end)]
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(entropy_list, binary_list)
-    print(f"entropy:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"entropy:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
 
     ppl_list = [1 / bash_list[i]["ppl"] for i in range(range_start, range_end)]
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(ppl_list, binary_list)
-    print(f"ppl:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"ppl:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
 
     coer_list = [bash_list[i]["R"] for i in range(range_start, range_end)]
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(coer_list, binary_list)
-    print(f"coe-R:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"coe-R:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
 
     coec_list = [bash_list[i]["C"] for i in range(range_start, range_end)]
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(coec_list, binary_list)
-    print(f"coe-C:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"coe-C:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+
+    mag_dict = {}
+    #mag_list = [bash_list[i]["Mag"] for i in range(range_start, range_end)]
+    mag_list = []  # 初始化空列表
+    for i in range(range_start, range_end):
+       # print(i)
+        item = bash_list[i]  # 获取当前项（修正变量名）
+        mag_value = item["Mag"]  # 提取 "Mag" 键对应的值
+        mag_list.append(mag_value)  # 添加到结果列表
 
 
-    mag_list = [bash_list[i]["Mag"] for i in range(range_start, range_end)]
+
+    print("@"*40 +" Spatial Displacement via Euclidean distance. (MAG) " + "@"*40 )
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(mag_list, binary_list)
-    print(f"Mag:     {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"Mag:{auroc:.2f},{fpr95:.2f},{aupr:.2f}     {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    mag_dict["Mag"] = (auroc,fpr95,aupr)
 
     Mag_linear = [bash_list[i]["Mag_linear"] for i in range(range_start, range_end)]
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Mag_linear, binary_list)
-    print(f"Mag_linear:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"Mag_linear:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    mag_dict["Mag_linear"] = (auroc, fpr95, aupr)
 
     Mag_exp = [bash_list[i]["Mag_exp"] for i in range(range_start, range_end)]
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Mag_exp, binary_list)
-    print(f"Mag_exp:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"Mag_exp:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    mag_dict["Mag_exp"] = (auroc, fpr95, aupr)
 
     Mag_step = [bash_list[i]["Mag_step"] for i in range(range_start, range_end)]
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Mag_step, binary_list)
-    print(f"Mag_step:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"Mag_step:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    mag_dict["Mag_step"] = (auroc, fpr95, aupr)
 
     Mag_log = [bash_list[i]["Mag_log"] for i in range(range_start, range_end)]
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Mag_log, binary_list)
-    print(f"Mag_log:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"Mag_log:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    mag_dict["Mag_log"] = (auroc, fpr95, aupr)
 
-    Mag_reciprocal = [bash_list[i]["Mag_reciprocal"] for i in range(range_start, range_end)]
-    auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Mag_reciprocal, binary_list)
-    print(
-        f"Mag_reciprocal:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+
+    # Mag_reciprocal = [bash_list[i]["Mag_reciprocal"] for i in range(range_start, range_end)]
+    # auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Mag_reciprocal, binary_list)
+    # print(
+    #     f"Mag_reciprocal:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    # mag_dict["Mag_reciprocal"] = (auroc, fpr95, aupr)
 
     Mag_quantile = [bash_list[i]["Mag_quantile"] for i in range(range_start, range_end)]
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Mag_quantile, binary_list)
     print(
-        f"Mag_quantile:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+        f"Mag_quantile:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    mag_dict["Mag_quantile"] = (auroc, fpr95, aupr)
 
+    #####################################################################################################################################
+    print("@"*40 +" Directional Alignment via Cosine Similarity (ANG) " + "@"*40 )
+    Ang_dict = {}
     ang_list = [bash_list[i]["Ang"] for i in range(range_start, range_end)]
+    ang_list = -np.array(ang_list)
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(ang_list, binary_list)
-    print(f"Ang:     {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
-
-
-
+    print(f"Ang:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}     {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    Ang_dict["Ang"] = (auroc, fpr95, aupr)
 
     Ang_linear = [bash_list[i]["Ang_linear"] for i in range(range_start, range_end)]
+    Ang_linear = -np.array(Ang_linear)
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Ang_linear, binary_list)
-    print(f"Ang_linear:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"Ang_linear:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    Ang_dict["Ang_linear"] = (auroc, fpr95, aupr)
 
     Ang_exp = [bash_list[i]["Ang_exp"] for i in range(range_start, range_end)]
+    Ang_exp = -np.array(Ang_exp)
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Ang_exp, binary_list)
-    print(f"Ang_exp:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"Ang_exp:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    Ang_dict["Ang_exp"] = (auroc, fpr95, aupr)
 
-    Ang_step = [bash_list[i]["Angg_step"] for i in range(range_start, range_end)]
+    Ang_step = [bash_list[i]["Ang_step"] for i in range(range_start, range_end)]
+    Ang_step = -np.array(Ang_step)
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Ang_step, binary_list)
-    print(f"Ang_step:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"Ang_step:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    Ang_dict["Ang_step"] = (auroc, fpr95, aupr)
 
     Ang_log = [bash_list[i]["Ang_log"] for i in range(range_start, range_end)]
+    Ang_log = -np.array(Ang_log)
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Ang_log, binary_list)
-    print(f"Ang_log:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print(f"Ang_log:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    Ang_dict["Ang_log"] = (auroc, fpr95, aupr)
 
-    Ang_reciprocal = [bash_list[i]["Ang_reciprocal"] for i in range(range_start, range_end)]
-    auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Ang_reciprocal, binary_list)
-    print(
-        f"Ang_reciprocal:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    # Ang_reciprocal = [bash_list[i]["Ang_reciprocal"] for i in range(range_start, range_end)]
+    # auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Ang_reciprocal, binary_list)
+    # print(
+    #     f"Ang_reciprocal:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+
+    #Ang_dict["Ang_reciprocal"] = (auroc, fpr95, aupr)
 
     Ang_quantile = [bash_list[i]["Ang_quantile"] for i in range(range_start, range_end)]
+    Ang_quantile = -np.array(Ang_quantile)
     auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(Ang_quantile, binary_list)
     print(
-        f"Ang_quantile:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+        f"Ang_quantile:{auroc:.2f}, {fpr95:.2f}, {aupr:.2f}    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    Ang_dict["Ang_quantile"] = (auroc, fpr95, aupr)
+    # liner = np.array(Mag_linear) - np.array(Ang_linear)
+    # auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(liner, binary_list)
+    # print(
+    #     f"liner:{auroc:.2f},{fpr95:.2f},{aupr:.2f}   {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+    print("*" * 100)
+    ang_sorted_list = sorted(Ang_dict.items(), key=lambda item: item[1][0],reverse=True)
+    best_ang = ang_sorted_list[0][0]
+    print(best_ang)
+    mag_sorted_list = sorted(mag_dict.items(), key=lambda item: item[1][0],reverse=True)
+    best_mag = mag_sorted_list[0][0]
+    print(best_mag)
+    SToIHL_dict = {}
+    for ang in ang_sorted_list:
+        for mag in mag_sorted_list:
+            ang_name = ang[0]
+            mag_name = mag[0]
+            a = [bash_list[i][ang_name] for i in range(range_start, range_end)]
+            b = [bash_list[i][mag_name] for i in range(range_start, range_end)]
+            best_Important =  np.array(b) + 2 * np.array(a)
+            auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(best_Important, binary_list)
+            print(
+                f"{mag_name}-{ang_name}:{auroc:.2f},{fpr95:.2f},{aupr:.2f}   {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+            name = f"{mag_name}-{ang_name}"
+            SToIHL_dict[name] = (auroc, fpr95, aupr)
+    SToIHL_sorted_list = sorted(SToIHL_dict.items(), key=lambda item: item[1][0], reverse=True)
+    best_SToIHL = SToIHL_sorted_list[0][0]
+
+    print(best_SToIHL)
+    print(SToIHL_sorted_list[0][0],SToIHL_sorted_list[0][1])
+
+    #a = [bash_list[i]["Mag"] for i in range(range_start, range_end)]
+   # b = [bash_list[i]["Ang"] for i in range(range_start, range_end)]
+   ## a=  np.array(a)
+   # b = np.array(b)
+    #standardized_a = (a - np.mean(a)) / np.std(a)
+    #standardized_b = (b - np.mean(b)) / np.std(b)
+
+    # best_Important = a  - b
+    # auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(best_Important, binary_list)
+    # print(
+    #     f"best_Important:{auroc:.2f},{fpr95:.2f},{aupr:.2f}   {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
 
 
-    print("利用MAG 和 ANG 进行计算 ")
-    coe_R_1 = np.array(mag_list) - np.array(ang_list)
-    auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(coe_R_1, binary_list)
-    print(f"coe_R_1:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
 
-    print("利用Mag_quantile 和 Ang_exp 进行计算 ")
-    coe_R_2 = np.array(Mag_quantile) - np.array(Ang_exp)
-    auroc, fpr95, aupr, _, _, _ = selfeval.self_eval(coe_R_2, binary_list)
-    print(f"coe_R_2:    {'auroc'.rjust(30)}: {auroc:.2f}{'fpr95'.rjust(30)}: {fpr95:.2f}{'aupr'.rjust(30)}: {aupr:.2f}")
+
+
+
+
+

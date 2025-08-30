@@ -74,13 +74,14 @@ def count_base(id,layers,model,dateset):
             h = np.mean(all_pos_hs, axis=0)
             #hs_all_layer_pic.append(all_pos_hs)
             hs_all_layer.append(h)
-         # compute_CoE_Mag
+        # compute_CoE_Mag
         # 系数a,计算二范数，即欧基里德范数，Zmag系数，系数的范围都是最有一层与第一层的差值
         norm_denominator_a = np.linalg.norm(hs_all_layer[-1] - hs_all_layer[0], ord=2)
         # 系数b 计算向量夹角（弧度）,#ZAng 系数，系数的范围都是最有一层与第一层的差值
         norm_denominator_te = np.dot(hs_all_layer[-1], hs_all_layer[0]) / (
                 np.linalg.norm(hs_all_layer[-1], ord=2) * np.linalg.norm(hs_all_layer[0], ord=2))  # 计算向量夹角的余弦值
         norm_denominator_b = math.acos(norm_denominator_te)
+
         # 系数c
         al_repdiff_norm = []
         al_semdiff = []
@@ -121,13 +122,12 @@ def count_base(id,layers,model,dateset):
         #
 
         Mag = np.mean(np.array(al_repdiff_norm))
-
         important_layer = np.array(important) * np.array(al_repdiff_norm)
         Mag_linear = np.mean(important_layer * np.array(linear))
         Mag_exp = np.mean(important_layer * np.array(exp))
         Mag_step = np.mean(important_layer * np.array(step))
         Mag_log = np.mean(important_layer * np.array(log))
-       # Mag_reciprocal = np.mean(important_layer * np.array(reciprocal))
+        # Mag_reciprocal = np.mean(important_layer * np.array(reciprocal))
         Mag_quantile = np.mean(important_layer * np.array(quantile))
 
         # 求余弦角平均数
@@ -221,7 +221,6 @@ class Layer:
 
         # 指数衰减 (α=0.5)
         self.exp_coeffs = np.exp(-0.5 * rank)
-
         # 阶梯函数
         if rank <= n * 0.1:
             self.step_coeffs = 1.0
@@ -231,10 +230,8 @@ class Layer:
             self.step_coeffs = 0.5
         else:
             self.step_coeffs = 0.2
-
         # 对数缩放
         self.log_coeffs = np.log(n - rank + 2) / np.log(n + 1)
-
         # 分位数映射 (4分位数)
         if rank <= n * 0.25:
             self.quantile_coeffs = 1.0
@@ -244,7 +241,6 @@ class Layer:
             self.quantile_coeffs = 0.5
         else:
             self.quantile_coeffs = 0.2
-
         # 倒数加权
         # self.reciprocal_coeffs = 1.0 / rank
         # Sigmoid函数 (β=0.5, mid=n/2)
@@ -259,6 +255,7 @@ def read_list_from_txt(file_path):
 
 def compute_layer_status(model_name,dateset_name,task_start,task_end):
     start_time = time.time()
+    # 读取总要层的信息
     ImportantFilePath = f"D:\\GitHub\\Chain-of-Embedding\\{model_name}_important_layer.txt"
     # 读取余弦值列表
     cos_list = read_list_from_txt(ImportantFilePath)
@@ -321,72 +318,10 @@ def compute_layer_status(model_name,dateset_name,task_start,task_end):
 
 if __name__ == '__main__':
 
-    model = ["Qwen2.5-7B-Instruct",]
-    dataset = ["commonsenseqa"]
+    model = ["Qwen2.5-7B-Instruct","Llama-3-8B-Instruct"]
+    dataset = ["commonsenseqa","mgsm","commonsenseqa"]
     p = []
-    for m in model :
-        for d in dataset :
-            compute_layer_status(m,d,task_start=0,task_end=500)
+    m = "Qwen2.5-7B-Instruct"
+    d = "mgsm"
+    compute_layer_status(m,d,task_start=0,task_end=500)
 
-   #  ImportantFilePath = "D:\\GitHub\\Chain-of-Embedding\\important_layer.txt"
-   #  # 读取余弦值列表
-   #  cos_list = read_list_from_txt(ImportantFilePath)
-   #  n = len(cos_list)
-   #  # 创建Layer对象列表（保留原始ID）
-   #  layers = [Layer(i + 1, cos) for i, cos in enumerate(cos_list)]
-   #  # 根据cosine值降序排序
-   #  sorted_layers = sorted(layers, key=lambda x: x.cosine, reverse=True)
-   #  # 为排序后的层分配新排名并计算系数
-   #  for rank, layer in enumerate(sorted_layers, 1):
-   #      layer.calculate_coefficients(rank, n)
-   #      # 根据系数判断是否重要（示例：使用自定义权重 > 1.5）
-   #      if layer.linear_coeffs > 0.2:
-   #          layer.IsImportant = 1
-   #
-   #  # 打印处理结果
-   #  print(f"处理完成，共 {n} 个层，耗时: {time.time() - start_time:.2f} 秒")
-   #
-   #  # 打印所有层的详细参数
-   #  print("\n所有层的详细参数:")
-   #  print(f"{'原始ID':<8}{'Cosine':<10}{'新排名':<6}{'Linear':<10}{'Exp':<10}{'Step':<10}"
-   #        f"{'Log':<10}{'Reciprocal':<12}{'Quantile':<10}{'Important'}")
-   #
-   #  for layer in sorted_layers:
-   #      print(f"{layer.id:<8}{layer.cosine:<10.4f}{layer.rank:<6}{layer.linear_coeffs:<10.4f}"
-   #            f"{layer.exp_coeffs:<10.4f}{layer.step_coeffs:<10.4f}{layer.log_coeffs:<10.4f}"
-   #            f"{layer.reciprocal_coeffs:<12.4f}"
-   #            f"{layer.quantile_coeffs:<10.4f}{layer.IsImportant}")
-   #  start_time = time.time()
-   #  task_list = list(range(1000))
-   #  res_l = []
-   #  p = Pool(24)
-   # #  print(len(layers))
-   #  for task_id in task_list:
-   #      res=p.apply_async(work,args=(task_id,layers))
-   #      res_l.append(res)
-   #  p.close()
-   #  p.join()
-   #  #print([res.get() for res in res_l]) #该结果已经传给回调函数处理了
-   #  ssim_list = [res.get() for res in res_l]
-   #  base_dict_list = {}
-   #  for base_dict in ssim_list:
-   #      id = base_dict["id"]
-   #      val = base_dict["val"]
-   #      base_dict_list[id]=val
-   #  file_path = 'E:\\GitHub\\Chain-of-Embedding\\LayerState\\Qwen2.5-7B-Instruct\\commonsenseqa\\base_list.pickle'
-   #  directory = os.path.dirname(file_path)
-   #  if not os.path.exists(directory):
-   #      os.makedirs(directory, exist_ok=True)
-   #  # 以二进制写入模式打开文件
-   #  with open(file_path, 'wb') as file:
-   #      img_list = {"ssim_list":ssim_list,
-   #                  "base_list":base_dict_list}
-   #      # 使用 pickle.dump 方法将数组写入文件
-   #      pickle.dump(img_list, file)
-   #  end_time = time.time()
-   #  elapsed_time = end_time - start_time
-   #  print(len(base_dict_list))
-   #  print(f"数组已成功保存到 {file_path}")
-   #  minutes = int(elapsed_time // 60)
-   #  seconds = int(elapsed_time % 60)
-   #  print(f"程序运行时间: {minutes} 分 {seconds} 秒")

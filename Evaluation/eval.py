@@ -64,12 +64,22 @@ class StandardEvaluation:
         for i in range(range_start,range_end):
             sample = self.data_all[i]
             true_output = sample["answer"]
+            question = sample["en"]
             with open(os.path.join(output_dir, f"{args.dataset}_{str(i)}.pkl"), 'rb') as file:
                 output = pickle.load(file)
             pred_output = output["output_seq"]
             with open(os.path.join(coe_dir, f"{args.dataset}_{str(i)}.pkl"), 'rb') as file:
                 coe = pickle.load(file)
             extracted_answer, binary = answerparsing.dataset_parse(pred_output, true_output, sample)
+            if not binary:
+                print(str(i) +""+ "*" * 2 + "BEGIN" +  "*" * 50)
+                print(question)
+                print(str(i) + "*" * 20 + "pred_output" + "*" * 50)
+                print(pred_output)
+                print(str(i) + "*" * 20 + "true_output" + "*" * 50)
+                print(true_output)
+                print(str(i) + "*" * 2+ "END" +  "*" * 50)
+                print('\n')
             if binary: acc += 1
             output_list.append(output)
             coe_list.append(coe)
@@ -94,7 +104,7 @@ class SelfEvaluation:
     def self_eval(self, score_list, binary_list):
         if len(score_list) != len(binary_list):
             raise RuntimeError()
-        #score_list = self.min_max_transform(score_list)
+        # score_list = self.min_max_transform(score_list)
         fpr, tpr, thresholds = roc_curve(binary_list, score_list)
         auroc = auc(fpr, tpr)
         fpr95 = float(interpolate.interp1d(tpr, fpr)(0.95))
@@ -139,7 +149,7 @@ if __name__ == '__main__':
     data = ["mgsm","commonsenseqa"]
     parser = argparse.ArgumentParser(description="eval")
     parser.add_argument("--model_name", type=str, default="Qwen2.5-7B-Instruct", choices=MODEL_POOL)
-    parser.add_argument("--dataset", type=str, default="commonsenseqa", choices=DATASET_POOL)
+    parser.add_argument("--dataset", type=str, default="mgsm", choices=DATASET_POOL)
     parser.add_argument("--language", type=str, default="en")
     args = parser.parse_args()
     stdeval = StandardEvaluation([args.dataset])

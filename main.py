@@ -24,8 +24,8 @@ print(f'device: {device}')
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="chain-of-embedding")
 
-    parser.add_argument("--model_name", type=str, default="Llama-3-8B-Instruct", choices=MODEL_POOL)
-    parser.add_argument("--dataset", type=str, default="commonsenseqa", choices=DATASET_POOL)
+    parser.add_argument("--model_name", type=str, default="Qwen2.5-7B-Instruct", choices=MODEL_POOL)
+    parser.add_argument("--dataset", type=str, default="mgsm", choices=DATASET_POOL)
     parser.add_argument("--max_output_token", type=int, default=2048)
 
     parser.add_argument("--print_model_parameter", action="store_true")
@@ -70,7 +70,7 @@ if __name__ == '__main__':
         dataset_info["language"] = lang # 为dataset_info赋值
         # Infer = Inference(model_info, dataset_info, verbose)
         # Infer.dataset_inference()
-        Infer = InferenceSaveLayer(model_info, dataset_info, verbose,range_start=600)
+        Infer = InferenceSaveLayer(model_info, dataset_info, verbose,range_start=2,range_end=3)
         Infer.dataset_inference()
         #Infer = InferenceFromOutput(model_info, dataset_info, verbose)
         #Infer.dataset_inference()

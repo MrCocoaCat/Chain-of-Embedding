@@ -36,6 +36,7 @@ sys.path.append(project_root_path)
 from Data.load_data import DatasetInfo
 from prompt_pool import *
 from score import OutputScoreInfo, CoEScoreInfo
+import time
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -139,7 +140,6 @@ class Inference:
         )
         time_end = time.time()
         print(f'inference time: {round(time_end - time_start, 4)}')
-        
         return generation_output
 
 
@@ -242,19 +242,18 @@ class Inference:
 
 
     def save_CoE_figure(self, hidden_states, i):
+        # 使用 PCA（主成分分析）将高维的隐藏状态降维到 2 维
+        # n_components=2指定降维到 2 维，random_state=2024设置随机种子保证结果可复现
+        # fit_transform先拟合模型再将数据转换为降维后的嵌入向量
         embeddings = PCA(n_components=2, random_state=2024).fit_transform(np.array(hidden_states))
-
         fig = plt.figure(figsize=(14, 8))
         #fig.suptitle('Embedding Trajectory under Correct/Incorrect Samples', fontsize=40, fontweight='bold')
         ax1 = fig.add_subplot(1, 1, 1, facecolor='w')
-
         traj_x = np.array(embeddings[:, 0])
         traj_y = np.array(embeddings[:, 1])
-
         ax1.scatter(traj_x, traj_y, color='blue', alpha=1.0, edgecolor='white', s=200)
         ax1.plot(traj_x, traj_y, color='gray', linestyle='-', linewidth=2, alpha=0.5)
         ax1.text(0, 0, "Origin (0,0)", color='black', fontsize=10)
-
         ax1.set_xlabel('X-axis', fontsize=24, fontweight='bold')
         ax1.set_ylabel('Y-axis', fontsize=24, fontweight='bold')
         
@@ -262,7 +261,11 @@ class Inference:
         filedir = os.path.join(project_root_path, f'Figure/{self.language}', self.model_name, self.dataset_name)
         if not os.path.exists(filedir):
             os.makedirs(filedir)
-        plt.savefig(os.path.join(filedir, self.dataset_name + '_' + str(i) + '.png'), bbox_inches='tight', pad_inches=0)
+
+
+        timestamp =str(int(time.time() * 1000))
+
+        plt.savefig(os.path.join(filedir, self.dataset_name + '_' + str(i) + '_' + timestamp + '.png'), bbox_inches='tight', pad_inches=0)
 
 
 class InferenceFromOutput(Inference):
@@ -372,6 +375,7 @@ class InferenceSaveLayer(Inference):
                 self.sample_info["output"]["attentions"] = generation_output.attentions
                 self.sample_info["output"]["all_token_hidden_states"] = generation_output.hidden_states # output_len x layer_num x sampling_num x beam_search x hidden_dim
                 self.sample_info["output"]["output_len"] = min(self.max_output_token, len(generation_output.scores))
+
                 # 将模型保存下来
                 self.save_hidden_layer(i)
 
@@ -397,11 +401,11 @@ class InferenceSaveLayer(Inference):
 
     def save_hidden_layer(self,id):
         """
-        将模型的layer 保存下来，
+        将模型的layer 保存下来，保存到HiddenLayer文件夹路径下
         :return:
         """
         save_project_root_path =  "E:/GitHub/Chain-of-Embedding/"
-        filedir = os.path.join(save_project_root_path, 'OutputInfo',self.language,'HiddenLayer', self.model_name,
+        filedir = os.path.join(save_project_root_path,'HiddenLayer', self.model_name,
                                self.dataset_name)
         if not os.path.exists(filedir):
             os.makedirs(filedir)

@@ -177,12 +177,14 @@ def read_list_from_txt(file_path):
 
 if __name__ == '__main__':
 
-    dateset_names = ["mgsm","commonsenseqa","belebele"]
+    dateset_names_all = ["mgsm","commonsenseqa","belebele"]
     con_dict = {}
     # if model_name ==  "Llama-3-8B-Instruct":
     #     num_layer = 33
     # elif model_name == "Qwen2.5-7B-Instruct":
     #     num_layer = 29
+
+    dateset_names = ["mgsm",]
     for dateset_name in dateset_names:
         start_time = time.time()
         #task_list = list(range(3))
@@ -190,8 +192,8 @@ if __name__ == '__main__':
         similarities = get_cosine_similarity(device, layer_intervals, dateset_name)
         con_dict[dateset_name] = similarities
         print(similarities)
-        ImportantFilePath = f"D:\\GitHub\\Chain-of-Embedding\\{model_name}_{dateset_name}_important_layer.txt"
-        save_list_to_txt(similarities,ImportantFilePath)
+        #ImportantFilePath = f"D:\\GitHub\\Chain-of-Embedding\\{model_name}_{dateset_name}_important_layer.txt"
+        #save_list_to_txt(similarities,ImportantFilePath)
     for k,item in con_dict.items():
         print( k,item)
 

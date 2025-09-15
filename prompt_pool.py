@@ -1,6 +1,12 @@
 DATASET_PROMPTS = {
     "GSM8K": "Solve this math problem. Give the reasoning steps before giving the final answer on the last line by itself in the format of \"Answer:\". Do not add anything other than the integer answer after \"Answer:\".\n\nQuestion:\n{input_data}\n",
     "mgsm": "Solve this math problem. Give the reasoning steps before giving the final answer on the last line by itself in the format of \"Answer:\". Do not add anything other than the integer answer after \"Answer:\".\n\nQuestion:\n{input_data}\n",
+    "mgsm_se" : """
+    Solve this math problem. During the reasoning process, constantly conduct self-checks on each step of your reasoning. Make sure to carefully review whether the application of mathematical concepts, theorems, and formulas is accurate and logical. Pause and think deeply before moving on to the next step, ensuring that every link in the reasoning chain is solid and reliable.
+Clearly present the reasoning steps before giving the final answer on the last line in the format of \"Answer:\". Do not add anything other than the integer answer after \"Answer:\".
+Question:
+{input_data}
+    """,
     "math": "Question: {input_data}\nPlease reason step by step, and put your final answer within \\boxed{{}}\n",
     "mmmlu": "Answer the following multiple choice question. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of ABCD. Think step by step before answering.\n\nQuestion:\n{input_data}\n",
     "belebele": "Answer the following multiple choice reading-comprehension question. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of ABCD. Please fully understand the passage and give explanations step by step before answering.\n\n{input_data}\n",

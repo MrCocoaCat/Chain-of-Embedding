@@ -66,7 +66,7 @@ class Inference:
         self.greedy_inference()
         
 
-    def greedy_inference(self):
+    def  greedy_inference(self):
         for i in tqdm(range(self.data_size)):
             print("*"*30 + f" index {str(i)} " + "*"*30)
             sample = self.data_all[i]
@@ -414,7 +414,7 @@ class InferenceSaveLayer(Inference):
         torch.save(output_scores, file_path)
         print(f"Tensor 已保存到 {file_path}")
 
-    def save_sample_info(self,sample_info,id):
+    def save_sample_info(self,sample_info, id):
         """
         保存sample_info
         :return:
